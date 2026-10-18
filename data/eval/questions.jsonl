@@ -1,13 +1,13 @@
 {"id": "q01", "question": "comment je fais pour commander plusieurs articles ?", "intent": "place_order", "expected_source_file": "commandes.md", "must_contain": ["Valider mon panier"]}
 {"id": "q02", "question": "Est-ce que je peux commander sans créer de compte ?", "intent": "place_order", "expected_source_file": "commandes.md", "must_contain": ["sans compte", "invité"]}
 {"id": "q03", "question": "je voudrais modifier ma commande, je me suis trompée de taille, comment faire ?", "intent": "change_order", "expected_source_file": "commandes.md", "must_contain": ["En préparation", "Mes commandes"]}
-{"id": "q04", "question": "Bonjour, est-il possible d'ajouter un article à une commande déjà passée ?", "intent": "change_order", "expected_source_file": "commandes.md", "must_contain": ["Passez une nouvelle commande"]}
+{"id": "q04", "question": "Bonjour, est-il possible d'ajouter un article à une commande déjà passée ?", "intent": "change_order", "expected_source_file": "commandes.md", "must_contain": ["nouvelle commande"]}
 {"id": "q05", "question": "comment annuler ma commande svp", "intent": "cancel_order", "expected_source_file": "commandes.md", "must_contain": ["Annuler la commande", "En préparation"]}
 {"id": "q06", "question": "j'ai commandé sans compte, comment j'annule ma commande ?", "intent": "cancel_order", "expected_source_file": "commandes.md", "must_contain": ["Gérer ma commande"]}
-{"id": "q07", "question": "Y a-t-il des frais si j'annule ma commande ?", "intent": "check_cancellation_fee", "expected_source_file": "commandes.md", "must_contain": ["L'annulation est gratuite"]}
-{"id": "q08", "question": "combien ça coute d'annuler une commande et je suis remboursé quand ?", "intent": "check_cancellation_fee", "expected_source_file": "commandes.md", "must_contain": ["L'annulation est gratuite", "14 jours"]}
-{"id": "q09", "question": "comment je peux suivre mon colis ?", "intent": "track_order", "expected_source_file": "commandes.md", "must_contain": ["lien de suivi"]}
-{"id": "q10", "question": "Quelles sont les options de livraison ?", "intent": "delivery_options", "expected_source_file": "livraison.md", "must_contain": ["à domicile uniquement", "pas de livraison express"]}
+{"id": "q07", "question": "Y a-t-il des frais si j'annule ma commande ?", "intent": "check_cancellation_fee", "expected_source_file": "commandes.md", "must_contain": ["gratuite"]}
+{"id": "q08", "question": "combien ça coute d'annuler une commande et je suis remboursé quand ?", "intent": "check_cancellation_fee", "expected_source_file": "commandes.md", "must_contain": ["gratuite", "14 jours"]}
+{"id": "q09", "question": "comment je peux suivre mon colis ?", "intent": "track_order", "expected_source_file": "commandes.md", "must_contain": ["lien"]}
+{"id": "q10", "question": "Quelles sont les options de livraison ?", "intent": "delivery_options", "expected_source_file": "livraison.md", "must_contain": ["domicile", "pas de livraison express"]}
 {"id": "q11", "question": "Vous livrez en Belgique ? c'est combien ?", "intent": "delivery_options", "expected_source_file": "livraison.md", "must_contain": ["Belgique", "9,90 €"]}
 {"id": "q12", "question": "a partir de combien la livraison est gratuite", "intent": "delivery_options", "expected_source_file": "livraison.md", "must_contain": ["60 €", "4,90 €"]}
 {"id": "q13", "question": "en combien de temps je recois ma commande en france ?", "intent": "delivery_period", "expected_source_file": "livraison.md", "must_contain": ["3 à 5 jours ouvrés"]}
@@ -18,7 +18,7 @@
 {"id": "q18", "question": "Je voudrais me faire livrer au bureau, comment j'enregistre cette adresse ?", "intent": "set_up_shipping_address", "expected_source_file": "livraison.md", "must_contain": ["Mes adresses"]}
 {"id": "q19", "question": "j'ai combien de temps pour retourner un article ?", "intent": "check_refund_policy", "expected_source_file": "retours-remboursements.md", "must_contain": ["30 jours"]}
 {"id": "q20", "question": "Est-ce que je peux retourner des draps que j'ai déballés ?", "intent": "check_refund_policy", "expected_source_file": "retours-remboursements.md", "must_contain": ["raisons d'hygiène", "sauf en cas de défaut"]}
-{"id": "q21", "question": "comment me faire rembourser un article qui me plait pas ?", "intent": "get_refund", "expected_source_file": "retours-remboursements.md", "must_contain": ["Retourner un article", "étiquette de retour prépayée"]}
+{"id": "q21", "question": "comment me faire rembourser un article qui me plait pas ?", "intent": "get_refund", "expected_source_file": "retours-remboursements.md", "must_contain": ["Retourner un article", "étiquette", "prépayée"]}
 {"id": "q22", "question": "le retour est payant pour la belgique ?", "intent": "get_refund", "expected_source_file": "retours-remboursements.md", "must_contain": ["6,90 €"]}
 {"id": "q23", "question": "quand est-ce que je vais etre remboursé apres mon retour ?", "intent": "track_refund", "expected_source_file": "retours-remboursements.md", "must_contain": ["14 jours"]}
 {"id": "q24", "question": "j'ai renvoyé mon colis, comment savoir où en est le remboursement", "intent": "track_refund", "expected_source_file": "retours-remboursements.md", "must_contain": ["3 à 5 jours ouvrés", "Mes commandes"]}

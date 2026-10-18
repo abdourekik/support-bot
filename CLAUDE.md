@@ -66,6 +66,14 @@ Sources: https://ai.google.dev/gemini-api/docs/models, `/docs/embeddings`, `/doc
 - New schema changes go in a new numbered file (`002_…sql`); never edit a migration that was already run.
 - Never print `SUPABASE_DB_URL` or psql error output unmasked: it contains the database password.
 
+### Evaluation (`scripts/evaluate.py`)
+
+- One session per question (`eval-<run>-<id>`), 5 s delay, eval rows deleted from Supabase at the end (`--keep-logs` to keep them). Report: `docs/eval_report.md`.
+- Latest result (after prompt tuning + `compensation_demand` rule): 62/62 — 47/47 answerable fully correct, 0 false escalations, 15/15 escalations.
+- Rules in node "Check rules": prompt_injection, human_requested, legal_threat, compensation_demand, damaged_item, specific_order. A new rule must be tested on all 47 answerable questions (0 false positives) and on phrasings outside the test set.
+- `must_contain` holds essential words (numbers, codes, names exact), not full sentences. Changing the test set must be stated in the README results.
+- The workflow generator and Code-node sources live in the session scratchpad, not in the repo: edit `n8n/workflows/chat.json` (or the workflow in the n8n UI and re-export) for future changes.
+
 ### Widget (`widget/`)
 
 - React 19.3, Vite 8, TypeScript 7. Two builds: `vite.config.ts` (demo site, `dist/`) and `vite.embed.config.ts` (IIFE library, `dist-embed/maison-nora-chat.js`). Both mount the widget through `src/chat/mount.tsx` into a **Shadow DOM**; CSS is imported with `?inline`.

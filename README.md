@@ -124,6 +124,40 @@ curl -X POST http://localhost:5678/webhook/chat -H "Content-Type: application/js
 curl -X POST http://localhost:5678/webhook/chat -H "Content-Type: application/json; charset=utf-8" --data-binary @scripts/curl/3_injection.json
 ```
 
+A second webhook in the same workflow, `POST /webhook/escalation-email` with `{ "session_id", "email" }`, attaches the customer's email to the latest open escalation of the session (200 `{ ok: true }`, 404 if there is none, 400 if the email is invalid). The widget's email field uses it.
+
+## Chat widget and demo shop (`widget/`)
+
+React 19 + Vite + TypeScript. Needs Node 20+.
+
+```bash
+cd widget
+npm install
+npm run dev          # demo shop at http://localhost:5173 (n8n must be running)
+npm run build        # typecheck + dist/ (demo site) + dist-embed/maison-nora-chat.js
+```
+
+The webhook URLs come from `VITE_CHAT_WEBHOOK_URL` and `VITE_ESCALATION_WEBHOOK_URL` in the root `.env` (Vite reads it via `envDir: '..'`; only `VITE_*` variables reach the browser).
+
+Widget features: welcome message and suggestion chips, typing indicator, Enter to send (Shift+Enter for a new line), auto-scroll, sources as tags, inline email field after an escalation, French error messages with a retry button (30 s timeout), `session_id` and messages kept in `sessionStorage` (with an in-memory fallback), full-screen panel under 480 px, focus trap, Escape to close, `aria-live` message log, reduced-motion support.
+
+### Embed on any website
+
+`npm run build:embed` produces one self-contained file, `widget/dist-embed/maison-nora-chat.js` (React and CSS included, ~74 kB gzipped). Host it anywhere and add one tag before `</body>`:
+
+```html
+<script src="https://your-site.example/maison-nora-chat.js"
+        data-webhook-url="https://your-n8n.example/webhook/chat"
+        defer></script>
+```
+
+| Attribute | Default |
+|---|---|
+| `data-webhook-url` | value of `VITE_CHAT_WEBHOOK_URL` at build time |
+| `data-email-webhook-url` | the chat URL with `/chat` replaced by `/escalation-email` |
+
+The widget renders inside a Shadow DOM, so the host site's CSS does not change it and its CSS does not leak into the site. The n8n webhooks only accept requests from the origins listed in their *Allowed Origins (CORS)* option (`http://localhost:5173` in this demo): add the client's domain there. `widget/embed-test.html` (open http://localhost:5173/embed-test.html after `npm run build:embed`) loads the script on a page with deliberately aggressive CSS.
+
 ## Data preparation
 
 The scripts use only the Python standard library (Python 3.11+).

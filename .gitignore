@@ -10,6 +10,7 @@ data/raw/*
 # Node
 node_modules/
 dist/
+dist-embed/
 build/
 .vite/
 *.log
@@ -38,3 +39,4 @@ docker-compose.override.yml
 Thumbs.db
 .vscode/
 .idea/
+.claude/

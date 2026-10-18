@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test du script embarquable</title>
+    <style>
+      /* Aggressive host styles: the widget must not be affected (Shadow DOM). */
+      * { font-family: 'Comic Sans MS', cursive !important; color: purple; }
+      button { background: yellow !important; border: 4px solid red !important; }
+      body { margin: 40px; background: #f0f0f0; }
+    </style>
+  </head>
+  <body>
+    <h1>Site client quelconque</h1>
+    <p>
+      Cette page charge uniquement <code>dist-embed/maison-nora-chat.js</code> avec une balise &lt;script&gt;.
+      Lancez d'abord <code>npm run build:embed</code>, puis ouvrez http://localhost:5173/embed-test.html.
+    </p>
+    <button type="button">Bouton du site hôte</button>
+
+    <script
+      src="/dist-embed/maison-nora-chat.js"
+      data-webhook-url="http://localhost:5678/webhook/chat"
+      defer
+    ></script>
+  </body>
+</html>

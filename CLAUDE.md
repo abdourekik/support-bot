@@ -66,6 +66,16 @@ Sources: https://ai.google.dev/gemini-api/docs/models, `/docs/embeddings`, `/doc
 - New schema changes go in a new numbered file (`002_…sql`); never edit a migration that was already run.
 - Never print `SUPABASE_DB_URL` or psql error output unmasked: it contains the database password.
 
+### Widget (`widget/`)
+
+- React 19.3, Vite 8, TypeScript 7. Two builds: `vite.config.ts` (demo site, `dist/`) and `vite.embed.config.ts` (IIFE library, `dist-embed/maison-nora-chat.js`). Both mount the widget through `src/chat/mount.tsx` into a **Shadow DOM**; CSS is imported with `?inline`.
+- Put typography on `.mn-root`, not `:host` (host-page `*` rules with `!important` match the host element and are inherited).
+- API contract: chat `{answer, sources[{file, section}], escalated}`; the widget strips the trailing "Source : …" line and shows sources as tags. Email field → `POST /webhook/escalation-email`.
+- Host pages can open the chat with `window.dispatchEvent(new Event('maison-nora-chat:open'))`.
+- No prices on product cards (the KB has none; user chose option "b"). Product facts must match `produits-entretien.md`.
+- Browser-pane tests: the find/read_page tools do not see inside the Shadow DOM; use `document.getElementById('maison-nora-chat').shadowRoot` in JavaScript. The dev-server launch config lives outside the repo, in `D:\AIBot automation n8n\.claude\launch.json`.
+- After a re-import + restart, n8n needs a few seconds before webhooks answer (empty response meanwhile).
+
 ## Folder structure
 
 ```

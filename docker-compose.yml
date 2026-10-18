@@ -13,9 +13,11 @@ services:
       - TZ=Europe/Paris
       - N8N_SECURE_COOKIE=false # local only, never in production
       - WEBHOOK_URL=http://localhost:5678/
+      - N8N_RESTRICT_FILE_ACCESS_TO=/data/knowledge_base # file nodes may only read this folder
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./n8n/workflows:/workflows:ro # import with: n8n import:workflow --separate --input=/workflows
+      - ./n8n/workflows:/workflows:ro # import with: n8n import:workflow --input=/workflows/<file>.json
+      - ./data/knowledge_base:/data/knowledge_base:ro # read by the "Ingest knowledge base" workflow
 
 volumes:
   n8n_data:

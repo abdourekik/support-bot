@@ -45,8 +45,15 @@ Sources: https://ai.google.dev/gemini-api/docs/models, `/docs/embeddings`, `/doc
 
 - `documents(id bigserial, content text, metadata jsonb, embedding vector(768))` + HNSW index (`vector_cosine_ops`).
 - `match_documents(query_embedding vector(768), match_count int default 5, filter jsonb default '{}')` → `id, content, metadata, similarity` (cosine, 1 = identical). Filter is JSONB containment (`metadata @> filter`).
-- n8n Supabase Vector Store node: table name `documents`, query name `match_documents`.
-- Chunk metadata keys: `source` (file name, e.g. `livraison.md`) and `section` (the `##` heading). The bot cites these.
+- Chunk metadata keys: `source_file` (e.g. `livraison.md`), `section_title` (the `##` heading), `doc_title` (the `#` heading), `chunk_index`. The bot cites `doc_title` / `section_title`.
+
+### n8n decisions (approved by the user: "option A")
+
+- The built-in n8n "Embeddings Google Gemini" node has **no output-dimensionality option** (it returns 3072 dims) and cannot add the `gemini-embedding-2` text prefixes. So workflows call Gemini with **HTTP Request** nodes (`batchEmbedContents` / `embedContent`, `outputDimensionality: 768`) using the predefined credential `googlePalmApi`, and talk to Supabase with the **Supabase** node or HTTP Request + credential `supabaseApi`. Do not use the LangChain vector store / embeddings nodes.
+- n8n version in use: 2.43.x. `$env` is blocked in expressions/Code nodes; use credentials, not environment variables.
+- File nodes can only read `N8N_RESTRICT_FILE_ACCESS_TO=/data/knowledge_base` (mounted read-only from `./data/knowledge_base`).
+- Workflow JSON files contain no credential IDs; after import, select the credentials in each node.
+- Running n8n CLI commands from Git Bash needs `MSYS_NO_PATHCONV=1` (otherwise `/workflows/...` is rewritten to a Windows path). From cmd/PowerShell no prefix is needed.
 - `conversations` and `escalations` logs; escalation `status` is `open` / `in_progress` / `closed`.
 - RLS on all tables, no policies: only the secret key (server side) can read/write. New tables must follow the same rule.
 - The secret key is the new-style `sb_secret_…` key, stored as `SUPABASE_SERVICE_ROLE_KEY`; send it in the `apikey` header.

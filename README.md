@@ -61,6 +61,35 @@ The migration creates:
 
 Row Level Security is enabled on every table with no policies, so the public (publishable) key can read nothing. Only the server-side secret key used by n8n and the scripts has access.
 
+## Ingestion workflow (n8n)
+
+`n8n/workflows/ingest.json` ("Ingest knowledge base") turns the markdown files into searchable chunks:
+
+```
+Manual trigger / POST /webhook/ingest
+  → Read /data/knowledge_base/*.md
+  → Split by "## " section, then ~800-char chunks with ~100-char overlap
+  → Gemini gemini-embedding-2 (batchEmbedContents, 768 dims, document prefix)
+  → Delete old rows in documents → Insert new rows
+  → Summary {files, chunks}
+```
+
+Old rows are deleted only after all embeddings succeed, so a failed run never leaves the store empty.
+
+1. Create two credentials in n8n (**Overview → Create → Credential**): *Google Gemini(PaLM) Api* (API key) and *Supabase API* (host + secret key).
+2. Import the workflow:
+   ```bash
+   docker compose exec n8n n8n import:workflow --input=/workflows/ingest.json
+   ```
+3. Open the workflow, select the credentials in the nodes **Gemini: embed batch**, **Delete old chunks** and **Insert chunks**, save, then click **Execute workflow**.
+4. Check in the Supabase SQL editor:
+   ```sql
+   select metadata->>'source_file' as file, count(*) as chunks
+   from documents group by 1 order by 1;
+   ```
+
+Why HTTP Request nodes instead of n8n's Gemini embeddings node: that node cannot set the output dimensionality (it returns 3072 dimensions), and the database is built for 768.
+
 ## Data preparation
 
 The scripts use only the Python standard library (Python 3.11+).

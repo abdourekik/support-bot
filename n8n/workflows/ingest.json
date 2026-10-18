@@ -1,0 +1,296 @@
+{
+  "id": "mnoraIngestKB001",
+  "name": "Ingest knowledge base",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "465a44bb-5a6f-5e7f-99f2-9c8d0da93e05",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "6fa15296-df17-5bc5-8b79-e5dd50cb22fc",
+      "name": "POST /webhook/ingest",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "webhookId": "2d7a162d-a578-5ffc-86a8-aeb39a1e821a"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/knowledge_base/*.md",
+        "options": {}
+      },
+      "id": "85788d6f-8579-52a1-aa19-e16cc9680c07",
+      "name": "Read knowledge base files",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split each markdown file into \"## \" sections, then each section into\n// ~800-character chunks with ~100 characters of overlap (recursive splitter:\n// paragraphs first, then lines, sentences, words).\nconst CHUNK_SIZE = 800;\nconst CHUNK_OVERLAP = 100;\nconst SEPARATORS = ['\\n\\n', '\\n', '. ', ' '];\n\nfunction recursiveSplit(text, separators = SEPARATORS) {\n  if (text.length <= CHUNK_SIZE) return [text];\n  const [sep, ...rest] = separators;\n  if (sep === undefined) {\n    const out = [];\n    for (let i = 0; i < text.length; i += CHUNK_SIZE - CHUNK_OVERLAP) out.push(text.slice(i, i + CHUNK_SIZE));\n    return out;\n  }\n  const pieces = text.split(sep).flatMap((p) => (p.length > CHUNK_SIZE ? recursiveSplit(p, rest) : [p]));\n  const chunks = [];\n  let current = '';\n  for (const piece of pieces) {\n    const candidate = current ? current + sep + piece : piece;\n    if (candidate.length <= CHUNK_SIZE) {\n      current = candidate;\n      continue;\n    }\n    if (current) chunks.push(current);\n    // Start the next chunk with the last words of the previous one.\n    const tail = current.slice(-CHUNK_OVERLAP);\n    const overlap = tail.includes(' ') ? tail.slice(tail.indexOf(' ') + 1) : '';\n    current = overlap && (overlap + sep + piece).length <= CHUNK_SIZE ? overlap + sep + piece : piece;\n  }\n  if (current) chunks.push(current);\n  return chunks.map((c) => c.trim()).filter(Boolean);\n}\n\nconst items = $input.all();\nconst results = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const buffer = await this.helpers.getBinaryDataBuffer(i, 'data');\n  const text = buffer.toString('utf8').replace(/\\r\\n/g, '\\n');\n  const sourceFile = items[i].binary.data.fileName;\n  const titleMatch = text.match(/^# (.+)$/m);\n  const docTitle = titleMatch ? titleMatch[1].trim() : sourceFile;\n\n  for (const section of text.split(/^## /m).slice(1)) {\n    const newline = section.indexOf('\\n');\n    const sectionTitle = (newline === -1 ? section : section.slice(0, newline)).trim();\n    const body = newline === -1 ? '' : section.slice(newline + 1).trim();\n    if (!body) continue;\n\n    recursiveSplit(body).forEach((chunk, chunkIndex) => {\n      results.push({\n        json: {\n          content: chunk,\n          metadata: { source_file: sourceFile, section_title: sectionTitle, doc_title: docTitle, chunk_index: chunkIndex },\n          // gemini-embedding-2 has no task_type: documents use this prefix (see CLAUDE.md).\n          embed_text: `title: ${docTitle} - ${sectionTitle} | text: ${chunk}`,\n        },\n      });\n    });\n  }\n}\n\nif (results.length === 0) throw new Error('No chunks produced: is /data/knowledge_base mounted and non-empty?');\nreturn results;\n"
+      },
+      "id": "38979104-f318-54ec-8162-70acc20a672b",
+      "name": "Split into chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gemini batchEmbedContents accepts up to 100 texts per call.\n// ~42 chunks = 1 call, which keeps us far below the free-tier rate limit.\nconst BATCH_SIZE = 100;\nconst chunks = $input.all().map((item) => item.json);\nconst batches = [];\n\nfor (let i = 0; i < chunks.length; i += BATCH_SIZE) {\n  const batch = chunks.slice(i, i + BATCH_SIZE);\n  batches.push({\n    json: {\n      rows: batch.map((c) => ({ content: c.content, metadata: c.metadata })),\n      requests: batch.map((c) => ({\n        model: 'models/gemini-embedding-2',\n        content: { parts: [{ text: c.embed_text }] },\n        outputDimensionality: 768,\n      })),\n    },\n  });\n}\nreturn batches;\n"
+      },
+      "id": "beb5633e-952e-5377-9270-629a5c41e5b3",
+      "name": "Group into batches of 100",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: $json.requests }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "id": "0b826272-b78a-5485-9fe7-89ca3466f3eb",
+      "name": "Gemini: embed batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pair each embedding with its chunk (same order as the batch request).\nconst batches = $('Group into batches of 100').all();\nconst rows = [];\n\n$input.all().forEach((item, i) => {\n  const embeddings = item.json.embeddings || [];\n  const batchRows = batches[i].json.rows;\n  if (embeddings.length !== batchRows.length) {\n    throw new Error(`Batch ${i}: expected ${batchRows.length} embeddings, got ${embeddings.length}`);\n  }\n  batchRows.forEach((row, j) => {\n    const values = embeddings[j].values;\n    if (values.length !== 768) throw new Error(`Embedding has ${values.length} dimensions, expected 768`);\n    rows.push({ ...row, embedding: values });\n  });\n});\n\nreturn [{ json: { rows, chunk_count: rows.length, file_count: new Set(rows.map((r) => r.metadata.source_file)).size } }];\n"
+      },
+      "id": "da009be2-b7c2-526e-bbcd-eea5d1798d01",
+      "name": "Attach embeddings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "documents",
+        "filterType": "string",
+        "filterString": "id=gte.0"
+      },
+      "id": "685d2d0a-6d21-5d10-a5cb-500152bea71e",
+      "name": "Delete old chunks",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        300
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per row, so the Supabase node inserts every chunk.\nreturn $('Attach embeddings').first().json.rows.map((row) => ({ json: row }));\n"
+      },
+      "id": "a7ad824b-d57b-5771-aa16-e4d0d901ffcf",
+      "name": "One item per chunk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "documents",
+        "dataToSend": "autoMapInputData"
+      },
+      "id": "42505067-f45f-58eb-a9b2-9f6f56803809",
+      "name": "Insert chunks",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { chunk_count, file_count } = $('Attach embeddings').first().json;\nreturn [{ json: { status: 'ok', files: file_count, chunks: chunk_count, finished_at: new Date().toISOString() } }];\n"
+      },
+      "id": "17df6275-d846-55b5-8960-0574ec6f346f",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Read knowledge base files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /webhook/ingest": {
+      "main": [
+        [
+          {
+            "node": "Read knowledge base files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read knowledge base files": {
+      "main": [
+        [
+          {
+            "node": "Split into chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split into chunks": {
+      "main": [
+        [
+          {
+            "node": "Group into batches of 100",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Group into batches of 100": {
+      "main": [
+        [
+          {
+            "node": "Gemini: embed batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: embed batch": {
+      "main": [
+        [
+          {
+            "node": "Attach embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach embeddings": {
+      "main": [
+        [
+          {
+            "node": "Delete old chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete old chunks": {
+      "main": [
+        [
+          {
+            "node": "One item per chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per chunk": {
+      "main": [
+        [
+          {
+            "node": "Insert chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert chunks": {
+      "main": [
+        [
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

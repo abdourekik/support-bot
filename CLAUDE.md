@@ -41,6 +41,18 @@ Sources: https://ai.google.dev/gemini-api/docs/models, `/docs/embeddings`, `/doc
 - Free-tier rate limits are low: batch and throttle embedding calls, and retry on HTTP 429 with backoff.
 - Re-check these IDs in the docs before changing any model; models get deprecated.
 
+### Supabase schema (`supabase/migrations/001_init.sql`)
+
+- `documents(id bigserial, content text, metadata jsonb, embedding vector(768))` + HNSW index (`vector_cosine_ops`).
+- `match_documents(query_embedding vector(768), match_count int default 5, filter jsonb default '{}')` → `id, content, metadata, similarity` (cosine, 1 = identical). Filter is JSONB containment (`metadata @> filter`).
+- n8n Supabase Vector Store node: table name `documents`, query name `match_documents`.
+- Chunk metadata keys: `source` (file name, e.g. `livraison.md`) and `section` (the `##` heading). The bot cites these.
+- `conversations` and `escalations` logs; escalation `status` is `open` / `in_progress` / `closed`.
+- RLS on all tables, no policies: only the secret key (server side) can read/write. New tables must follow the same rule.
+- The secret key is the new-style `sb_secret_…` key, stored as `SUPABASE_SERVICE_ROLE_KEY`; send it in the `apikey` header.
+- New schema changes go in a new numbered file (`002_…sql`); never edit a migration that was already run.
+- Never print `SUPABASE_DB_URL` or psql error output unmasked: it contains the database password.
+
 ## Folder structure
 
 ```

@@ -42,6 +42,25 @@ The bot answers only from the shop's own documents, cites the source section, an
 
 More setup steps (Supabase, workflows, widget) will be documented as they are built.
 
+## Supabase setup
+
+1. Create a free Supabase project and fill in `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (the `sb_secret_…` key) and `SUPABASE_DB_URL` (Session pooler URI) in `.env`.
+2. In the Supabase dashboard, open **SQL Editor → New query**, paste the contents of `supabase/migrations/001_init.sql` and click **Run**. The script is safe to run more than once.
+3. Check the schema:
+   ```bash
+   python scripts/test_supabase.py
+   ```
+
+The migration creates:
+
+| Object | Purpose |
+|---|---|
+| `documents` + `match_documents()` | Vector store used by the n8n Supabase Vector Store node (768-dim embeddings, cosine similarity, HNSW index) |
+| `conversations` | One row per question/answer, with cited sources, confidence and escalation flag |
+| `escalations` | Questions handed over to a human (`open` / `in_progress` / `closed`) |
+
+Row Level Security is enabled on every table with no policies, so the public (publishable) key can read nothing. Only the server-side secret key used by n8n and the scripts has access.
+
 ## Data preparation
 
 The scripts use only the Python standard library (Python 3.11+).

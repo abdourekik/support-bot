@@ -90,6 +90,40 @@ Old rows are deleted only after all embeddings succeed, so a failed run never le
 
 Why HTTP Request nodes instead of n8n's Gemini embeddings node: that node cannot set the output dimensionality (it returns 3072 dimensions), and the database is built for 768.
 
+## Chat workflow (n8n)
+
+`n8n/workflows/chat.json` ("Support chat") answers the widget at `POST /webhook/chat`.
+
+Request: `{ "session_id": "8-64 chars", "message": "max 1000 chars" }`
+Response: `{ "answer": "...", "sources": [{ "file": "livraison.md", "section": "Frais de livraison" }], "escalated": false }`
+
+```
+Webhook → validate input (400 if invalid)
+ → load the last 3 exchanges + any open escalation for this session (Postgres)
+ → rules: prompt injection, human requested, legal threat, damaged item, order number
+      → matched: fixed French reply, escalate (no LLM call)
+      → email sent after an escalation: save it on the escalation
+ → embed the question (gemini-embedding-2, query prefix, 768 dims)
+ → match_documents, top 5
+ → Gemini gemini-3.5-flash-lite, temperature 0.2, French system prompt,
+   JSON output { type: answer | escalate | small_talk, answer, source_ids, reason }
+ → escalate if the model says so, cites no retrieved document, or best similarity < 0.60
+ → log to conversations (+ escalations) → respond (CORS: http://localhost:5173)
+Any Gemini/database error → polite French fallback, escalated = true
+```
+
+Design choice: a fixed pipeline instead of an n8n AI Agent. Retrieval always runs, the sources shown are the chunks actually retrieved, the best similarity is logged as `confidence`, and each question costs one LLM call.
+
+Setup: the workflow uses two credentials, *Google Gemini(PaLM) Api* and a **Postgres** credential named *Supabase Postgres* (host, database, user, password and port from `SUPABASE_DB_URL`, SSL `require`, *Ignore SSL Issues* on). After importing, select them in the Postgres and HTTP Request nodes and publish the workflow.
+
+Test with the sample payloads (stored as UTF-8 files so accents survive on Windows):
+
+```bash
+curl -X POST http://localhost:5678/webhook/chat -H "Content-Type: application/json; charset=utf-8" --data-binary @scripts/curl/1_normal.json
+curl -X POST http://localhost:5678/webhook/chat -H "Content-Type: application/json; charset=utf-8" --data-binary @scripts/curl/2_escalate.json
+curl -X POST http://localhost:5678/webhook/chat -H "Content-Type: application/json; charset=utf-8" --data-binary @scripts/curl/3_injection.json
+```
+
 ## Data preparation
 
 The scripts use only the Python standard library (Python 3.11+).

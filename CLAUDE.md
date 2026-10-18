@@ -53,6 +53,12 @@ Sources: https://ai.google.dev/gemini-api/docs/models, `/docs/embeddings`, `/doc
 - n8n version in use: 2.43.x. `$env` is blocked in expressions/Code nodes; use credentials, not environment variables.
 - File nodes can only read `N8N_RESTRICT_FILE_ACCESS_TO=/data/knowledge_base` (mounted read-only from `./data/knowledge_base`).
 - Workflow JSON files contain no credential IDs; after import, select the credentials in each node.
+- **Chat workflow ("option 2", approved):** fixed pipeline, not an AI Agent. Rules → embed → `match_documents` top 5 → one `gemini-3.5-flash-lite` call with `responseSchema` JSON (`type`, `answer`, `source_ids`, `reason`) → escalate if model says so / no valid source / top similarity < `SIMILARITY_THRESHOLD` (0.60, in node "Parse answer") → log → respond. The source line ("Source : …") is appended by code, not written by the model.
+- Memory = last 3 exchanges read from `conversations` (not n8n Simple Memory).
+- Database access in the chat workflow uses a **Postgres** credential "Supabase Postgres" (session pooler, SSL require, ignore SSL issues), because the Supabase node cannot call `match_documents`. Pass parameters with `queryReplacement` as an array expression `={{ [ ... ] }}`; never build SQL from strings.
+- Webhooks only work on published workflows: `n8n publish:workflow --id=<id>` then restart n8n.
+- Test payloads with accents must be sent from UTF-8 files (`--data-binary @scripts/curl/…json`); inline French text in curl on Windows arrives as `�`.
+- When running `docker exec` from the Bash tool, add `< /dev/null`, otherwise the command can hang waiting for input.
 - Running n8n CLI commands from Git Bash needs `MSYS_NO_PATHCONV=1` (otherwise `/workflows/...` is rewritten to a Windows path). From cmd/PowerShell no prefix is needed.
 - `conversations` and `escalations` logs; escalation `status` is `open` / `in_progress` / `closed`.
 - RLS on all tables, no policies: only the secret key (server side) can read/write. New tables must follow the same rule.

@@ -41,3 +41,25 @@ The bot answers only from the shop's own documents, cites the source section, an
 3. Open http://localhost:5678 and create the owner account.
 
 More setup steps (Supabase, workflows, widget) will be documented as they are built.
+
+## Data preparation
+
+The scripts use only the Python standard library (Python 3.11+).
+
+```bash
+python scripts/download_bitext.py   # downloads the Bitext CSV into data/raw/ (checksum verified)
+python scripts/explore_bitext.py    # prints categories and intents with row counts
+python scripts/check_kb.py          # checks data/eval/questions.jsonl against data/knowledge_base/
+```
+
+- `data/knowledge_base/`: 10 French markdown files with the fictional shop's policies (delivery, returns, payment, invoices, account, etc.). They were written from scratch, using the Bitext intents only as a checklist of topics customers ask about.
+- `data/eval/questions.jsonl`: 62 French test questions. 47 can be answered from the knowledge base (each lists its source file and the key facts the answer must contain). 15 must be escalated to a human.
+
+## Data attribution
+
+The list of customer intents used to plan the knowledge base and the evaluation questions comes from the
+[Bitext Customer Service Tagged Training Dataset for LLM-based Virtual Assistants](https://huggingface.co/datasets/bitext/Bitext-customer-support-llm-chatbot-training-dataset)
+by Bitext Innovations, licensed under the
+[Community Data License Agreement – Sharing, Version 1.0 (CDLA-Sharing-1.0)](https://cdla.dev/sharing-1-0/).
+
+The dataset itself is not redistributed in this repository: `scripts/download_bitext.py` downloads it from Hugging Face into the git-ignored `data/raw/` folder. The evaluation questions are French adaptations of instructions from the dataset, with placeholders replaced.

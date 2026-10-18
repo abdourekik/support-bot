@@ -10,6 +10,8 @@ Re-read this file before every task. It is the source of truth for scope, stack 
   - **Cites the source section** of every answer.
   - **Escalates to a human** when it is not confident (low retrieval score, no relevant source, or out-of-scope question), and logs the escalation.
 - **Everything about the shop is invented.** Never use real brand names, real addresses, real phone numbers, real emails or real people. Use clearly fake data, e.g. `contact@maison-nora.example`, phone numbers in the reserved fictional range (+33 1 99 00 xx xx).
+- **Exception approved by the user:** « PayPal » may appear as a payment method (`paiement.md`), because it is realistic for a French shop. No other real brand names.
+- **Knowledge base = single source of truth for shop facts.** Before writing anything that states a shop fact (prices, delays, sizes, contact details), read the matching file in `data/knowledge_base/` and reuse its exact values. After changing the KB, run `python scripts/check_kb.py`.
 - **Audience:** small French-speaking businesses in Europe, shown as an Upwork portfolio demo. Quality of the demo, clarity of the README and GDPR-friendly choices matter.
 
 ## Stack (do not change without asking the user)
